@@ -135,13 +135,19 @@ export default function Dashboard() {
       default: '🎯'
     };
     
-    if (icon) return icon;
+    if (icon) {
+      // Check if it's a URL
+      if (icon.startsWith('http')) {
+        return { type: 'url', value: icon };
+      }
+      return { type: 'emoji', value: icon };
+    }
     
     const lowerName = name.toLowerCase();
     for (const [key, emoji] of Object.entries(iconMap)) {
-      if (lowerName.includes(key)) return emoji;
+      if (lowerName.includes(key)) return { type: 'emoji', value: emoji };
     }
-    return iconMap.default;
+    return { type: 'emoji', value: iconMap.default };
   };
 
   if (loading) {
@@ -278,13 +284,19 @@ export default function Dashboard() {
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {services.map((service) => (
+            {services.map((service) => {
+              const icon = getServiceIcon(service.icon, service.name);
+              return (
               <div 
                 key={service.id} 
                 className="glass-card p-6 hover:glow-primary transition-all duration-300 group animate-fade-in"
               >
-                <div className="text-4xl mb-4 group-hover:animate-rocket-launch">
-                  {getServiceIcon(service.icon, service.name)}
+                <div className="mb-4 group-hover:animate-rocket-launch">
+                  {icon.type === 'url' ? (
+                    <img src={icon.value} alt={service.name} className="w-12 h-12 rounded-xl object-cover" />
+                  ) : (
+                    <span className="text-4xl">{icon.value}</span>
+                  )}
                 </div>
                 
                 <h3 className="font-display font-bold text-lg mb-2">{service.name}</h3>
@@ -312,7 +324,8 @@ export default function Dashboard() {
                   )}
                 </Button>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </main>

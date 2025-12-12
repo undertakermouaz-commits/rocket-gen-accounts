@@ -236,7 +236,8 @@ export default function AdminPage() {
             </h2>
             <form onSubmit={handleAddService} className="space-y-4">
               <Input placeholder="Service name (e.g., Netflix)" value={newServiceName} onChange={(e) => setNewServiceName(e.target.value)} />
-              <Input placeholder="Icon (emoji)" value={newServiceIcon} onChange={(e) => setNewServiceIcon(e.target.value)} />
+              <Input placeholder="Icon (emoji or image URL)" value={newServiceIcon} onChange={(e) => setNewServiceIcon(e.target.value)} />
+              <p className="text-xs text-muted-foreground">Use an emoji like 🎬 or paste an image URL</p>
               <Input placeholder="Description" value={newServiceDesc} onChange={(e) => setNewServiceDesc(e.target.value)} />
               <Button type="submit" variant="glow" className="w-full">Add Service</Button>
             </form>
@@ -281,7 +282,11 @@ export default function AdminPage() {
             {services.map((service) => (
               <div key={service.id} className="glass-card p-4 flex items-center justify-between">
                 <div className="flex items-center gap-4">
-                  <span className="text-2xl">{service.icon || '🎯'}</span>
+                  {service.icon?.startsWith('http') ? (
+                    <img src={service.icon} alt={service.name} className="w-10 h-10 rounded-lg object-cover" />
+                  ) : (
+                    <span className="text-2xl">{service.icon || '🎯'}</span>
+                  )}
                   <div>
                     <p className="font-bold">{service.name}</p>
                     <p className="text-sm text-muted-foreground">
