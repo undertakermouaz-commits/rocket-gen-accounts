@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Logo } from '@/components/Logo';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ServiceIcon } from '@/components/ServiceIcon';
+import { StatCard } from '@/components/StatCard';
 import { toast } from 'sonner';
-import { Lock, Plus, Trash2, Package, Users, Database } from 'lucide-react';
+import { Lock, Plus, Trash2, Package, Users, Database, Shield, RefreshCw, Upload, Settings } from 'lucide-react';
 
 interface Service {
   id: string;
@@ -28,6 +29,7 @@ export default function AdminPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'services' | 'accounts'>('services');
   
   // Form states
   const [newServiceName, setNewServiceName] = useState('');
@@ -178,24 +180,40 @@ export default function AdminPage() {
   if (!authenticated) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="w-full max-w-sm">
+        <div className="fixed inset-0 pointer-events-none">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,hsl(var(--primary)/0.1),transparent_70%)]" />
+        </div>
+        
+        <div className="w-full max-w-sm relative z-10">
           <div className="text-center mb-8">
             <Logo size="lg" />
-            <p className="text-muted-foreground mt-4">Admin Access</p>
+            <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-destructive/10 border border-destructive/20">
+              <Shield className="h-4 w-4 text-destructive" />
+              <span className="text-sm font-medium text-destructive">Admin Access</span>
+            </div>
           </div>
           
-          <form onSubmit={handleLogin} className="glass-card p-6 space-y-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Lock className="h-5 w-5 text-primary" />
-              <span className="font-display font-bold">Enter Password</span>
+          <form onSubmit={handleLogin} className="glass-card p-8 rounded-2xl border border-border/50">
+            <div className="flex items-center gap-3 mb-6">
+              <div className="p-2 rounded-lg bg-primary/10">
+                <Lock className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <h2 className="font-display font-bold text-lg">Authentication Required</h2>
+                <p className="text-sm text-muted-foreground">Enter admin password to continue</p>
+              </div>
             </div>
+            
             <Input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Admin password"
+              placeholder="Enter admin password"
+              className="h-12 mb-4"
             />
-            <Button type="submit" variant="glow" className="w-full">Access Panel</Button>
+            <Button type="submit" variant="glow" className="w-full h-11">
+              Access Panel
+            </Button>
           </form>
         </div>
       </div>
@@ -203,105 +221,244 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
-      <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <Logo size="md" />
-          <Button variant="outline" onClick={() => setAuthenticated(false)}>Logout</Button>
-        </div>
+    <div className="min-h-screen bg-background">
+      <div className="fixed inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,hsl(var(--primary)/0.05),transparent_50%)]" />
+      </div>
 
+      {/* Header */}
+      <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl">
+        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Logo size="sm" />
+            <div className="h-6 w-px bg-border" />
+            <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-destructive/10">
+              <Settings className="h-3 w-3 text-destructive" />
+              <span className="text-xs font-medium text-destructive">Admin Panel</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={fetchData} disabled={loading}>
+              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setAuthenticated(false)}>
+              Logout
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      <main className="container mx-auto px-4 py-8 relative z-10">
         {/* Stats */}
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            {[
-              { label: 'Services', value: stats.totalServices, icon: Package },
-              { label: 'Total Accounts', value: stats.totalAccounts, icon: Database },
-              { label: 'Available', value: stats.availableAccounts, icon: Database },
-              { label: 'Users', value: stats.totalUsers, icon: Users },
-            ].map((stat) => (
-              <div key={stat.label} className="glass-card p-4">
-                <stat.icon className="h-5 w-5 text-primary mb-2" />
-                <p className="text-2xl font-bold">{stat.value}</p>
-                <p className="text-sm text-muted-foreground">{stat.label}</p>
-              </div>
-            ))}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+            <StatCard label="Total Services" value={stats.totalServices} icon={Package} />
+            <StatCard label="Total Accounts" value={stats.totalAccounts} icon={Database} />
+            <StatCard label="Available" value={stats.availableAccounts} icon={Database} trend="neutral" />
+            <StatCard label="Registered Users" value={stats.totalUsers} icon={Users} />
           </div>
         )}
 
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Add Service */}
-          <div className="glass-card p-6">
-            <h2 className="font-display font-bold text-lg mb-4 flex items-center gap-2">
-              <Plus className="h-5 w-5 text-primary" /> Add Service
-            </h2>
-            <form onSubmit={handleAddService} className="space-y-4">
-              <Input placeholder="Service name (e.g., Netflix)" value={newServiceName} onChange={(e) => setNewServiceName(e.target.value)} />
-              <Input placeholder="Icon (emoji or image URL)" value={newServiceIcon} onChange={(e) => setNewServiceIcon(e.target.value)} />
-              <p className="text-xs text-muted-foreground">Use an emoji like 🎬 or paste an image URL</p>
-              <Input placeholder="Description" value={newServiceDesc} onChange={(e) => setNewServiceDesc(e.target.value)} />
-              <Button type="submit" variant="glow" className="w-full">Add Service</Button>
-            </form>
-          </div>
+        {/* Tabs */}
+        <div className="flex gap-2 mb-6">
+          <Button
+            variant={activeTab === 'services' ? 'glow' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('services')}
+          >
+            <Package className="h-4 w-4 mr-2" />
+            Services
+          </Button>
+          <Button
+            variant={activeTab === 'accounts' ? 'glow' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('accounts')}
+          >
+            <Database className="h-4 w-4 mr-2" />
+            Add Accounts
+          </Button>
+        </div>
 
-          {/* Add Account */}
-          <div className="glass-card p-6">
-            <h2 className="font-display font-bold text-lg mb-4 flex items-center gap-2">
-              <Plus className="h-5 w-5 text-primary" /> Add Account
-            </h2>
-            <form onSubmit={handleAddAccount} className="space-y-4">
-              <select
-                className="w-full h-11 rounded-lg border border-border bg-secondary/50 px-4 text-sm"
-                value={selectedService}
-                onChange={(e) => setSelectedService(e.target.value)}
-              >
-                <option value="">Select service</option>
-                {services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-              </select>
-              <Input placeholder="Email" value={accountEmail} onChange={(e) => setAccountEmail(e.target.value)} />
-              <Input placeholder="Password" value={accountPassword} onChange={(e) => setAccountPassword(e.target.value)} />
-              <Button type="submit" variant="glow" className="w-full">Add Account</Button>
-            </form>
+        {activeTab === 'services' && (
+          <div className="grid lg:grid-cols-3 gap-6">
+            {/* Add Service Form */}
+            <div className="lg:col-span-1">
+              <div className="glass-card p-6 rounded-2xl border border-border/50 sticky top-24">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <Plus className="h-5 w-5 text-primary" />
+                  </div>
+                  <h2 className="font-display font-bold text-lg">Add Service</h2>
+                </div>
+                
+                <form onSubmit={handleAddService} className="space-y-4">
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-1.5 block">Service Name</label>
+                    <Input 
+                      placeholder="e.g., Netflix" 
+                      value={newServiceName} 
+                      onChange={(e) => setNewServiceName(e.target.value)} 
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-1.5 block">Icon (emoji or URL)</label>
+                    <Input 
+                      placeholder="🎬 or https://..." 
+                      value={newServiceIcon} 
+                      onChange={(e) => setNewServiceIcon(e.target.value)} 
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm text-muted-foreground mb-1.5 block">Description</label>
+                    <Input 
+                      placeholder="Optional description" 
+                      value={newServiceDesc} 
+                      onChange={(e) => setNewServiceDesc(e.target.value)} 
+                    />
+                  </div>
+                  
+                  <Button type="submit" variant="glow" className="w-full">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Service
+                  </Button>
+                </form>
+              </div>
+            </div>
 
-            <div className="mt-6 pt-6 border-t border-border">
-              <p className="text-sm text-muted-foreground mb-2">Bulk add (email:password per line)</p>
-              <textarea
-                className="w-full h-24 rounded-lg border border-border bg-secondary/50 px-4 py-2 text-sm"
-                placeholder="email1@test.com:password1&#10;email2@test.com:password2"
-                value={bulkAccounts}
-                onChange={(e) => setBulkAccounts(e.target.value)}
-              />
-              <Button variant="outline" className="w-full mt-2" onClick={handleBulkAdd}>Bulk Add</Button>
+            {/* Services List */}
+            <div className="lg:col-span-2">
+              <h3 className="font-display font-bold text-lg mb-4">All Services ({services.length})</h3>
+              <div className="space-y-3">
+                {services.map((service) => (
+                  <div 
+                    key={service.id} 
+                    className="glass-card p-4 rounded-xl border border-border/50 flex items-center justify-between group hover:border-border transition-colors"
+                  >
+                    <div className="flex items-center gap-4">
+                      <ServiceIcon icon={service.icon} name={service.name} size="sm" />
+                      <div>
+                        <p className="font-medium">{service.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {service.accounts?.[0]?.count || 0} accounts available
+                        </p>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleDeleteService(service.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                
+                {services.length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No services added yet</p>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
-        {/* Services List */}
-        <div className="mt-8">
-          <h2 className="font-display font-bold text-lg mb-4">Services</h2>
-          <div className="grid gap-4">
-            {services.map((service) => (
-              <div key={service.id} className="glass-card p-4 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  {service.icon?.startsWith('http') ? (
-                    <img src={service.icon} alt={service.name} className="w-10 h-10 rounded-lg object-cover" />
-                  ) : (
-                    <span className="text-2xl">{service.icon || '🎯'}</span>
-                  )}
-                  <div>
-                    <p className="font-bold">{service.name}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {service.accounts?.[0]?.count || 0} accounts
-                    </p>
-                  </div>
+        {activeTab === 'accounts' && (
+          <div className="grid lg:grid-cols-2 gap-6">
+            {/* Single Account */}
+            <div className="glass-card p-6 rounded-2xl border border-border/50">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Plus className="h-5 w-5 text-primary" />
                 </div>
-                <Button variant="destructive" size="icon" onClick={() => handleDeleteService(service.id)}>
-                  <Trash2 className="h-4 w-4" />
+                <h2 className="font-display font-bold text-lg">Add Single Account</h2>
+              </div>
+              
+              <form onSubmit={handleAddAccount} className="space-y-4">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1.5 block">Select Service</label>
+                  <select
+                    className="w-full h-11 rounded-xl border border-border bg-secondary/50 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    value={selectedService}
+                    onChange={(e) => setSelectedService(e.target.value)}
+                  >
+                    <option value="">Choose a service...</option>
+                    {services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1.5 block">Email</label>
+                  <Input 
+                    placeholder="account@email.com" 
+                    value={accountEmail} 
+                    onChange={(e) => setAccountEmail(e.target.value)} 
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1.5 block">Password</label>
+                  <Input 
+                    placeholder="Account password" 
+                    value={accountPassword} 
+                    onChange={(e) => setAccountPassword(e.target.value)} 
+                  />
+                </div>
+                
+                <Button type="submit" variant="glow" className="w-full">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Account
+                </Button>
+              </form>
+            </div>
+
+            {/* Bulk Add */}
+            <div className="glass-card p-6 rounded-2xl border border-border/50">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2 rounded-lg bg-glow-secondary/10">
+                  <Upload className="h-5 w-5 text-glow-secondary" />
+                </div>
+                <h2 className="font-display font-bold text-lg">Bulk Import</h2>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1.5 block">Select Service</label>
+                  <select
+                    className="w-full h-11 rounded-xl border border-border bg-secondary/50 px-4 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                    value={selectedService}
+                    onChange={(e) => setSelectedService(e.target.value)}
+                  >
+                    <option value="">Choose a service...</option>
+                    {services.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="text-sm text-muted-foreground mb-1.5 block">
+                    Accounts (one per line, format: email:password)
+                  </label>
+                  <textarea
+                    className="w-full h-40 rounded-xl border border-border bg-secondary/50 px-4 py-3 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                    placeholder="email1@example.com:password1&#10;email2@example.com:password2&#10;email3@example.com:password3"
+                    value={bulkAccounts}
+                    onChange={(e) => setBulkAccounts(e.target.value)}
+                  />
+                </div>
+                
+                <Button variant="outline" className="w-full" onClick={handleBulkAdd}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Import Accounts
                 </Button>
               </div>
-            ))}
+            </div>
           </div>
-        </div>
-      </div>
+        )}
+      </main>
     </div>
   );
 }
